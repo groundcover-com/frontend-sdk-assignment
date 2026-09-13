@@ -81,6 +81,8 @@ export interface TelemetryConfig {
   sampleRate?: number;
   /** Capture `error` / `unhandledrejection` automatically. Default false. */
   captureErrors?: boolean;
+  /** Emit a `page_view` on `init()` and on every client-side navigation. Default false. */
+  autoPageViews?: boolean;
   /** Free-form context echoed on every batch. */
   appVersion?: string;
   environment?: string;

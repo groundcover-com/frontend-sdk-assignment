@@ -5,6 +5,7 @@ import { Input } from '../components/input';
 import { init, shutdown } from '../sdk';
 import type { TelemetryConfig } from '../sdk/types';
 import { DEMO_API_KEY, INGEST_PATH } from './constants';
+import { callSdk } from './host-health';
 import { Panel } from './panel';
 
 /** Mirrors the defaults documented on `TelemetryConfig`. */
@@ -18,9 +19,34 @@ const INITIAL_CONFIG = {
   retryBaseDelayMs: 500,
   sampleRate: 1,
   captureErrors: false,
+  autoPageViews: false,
 };
 
 type DemoConfig = typeof INITIAL_CONFIG;
+
+function CheckboxField({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <Field className="sm:col-span-2">
+      <label className="flex items-center gap-3 text-sm/6 text-gray-900 dark:text-white">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(event) => onChange(event.target.checked)}
+          className="size-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 dark:border-white/15 dark:bg-white/5"
+        />
+        {label}
+      </label>
+    </Field>
+  );
+}
 
 function NumberField({
   label,
@@ -61,9 +87,12 @@ export function SdkConfigPanel({ initialized }: { initialized: boolean }) {
   const patch = <K extends keyof DemoConfig>(key: K, value: DemoConfig[K]) =>
     setConfig((current) => ({ ...current, [key]: value }));
 
+  // The bootstrap code of the host app, and just as exposed as the rest of it:
+  // if init() or shutdown() throws, the page that embedded the SDK is the one
+  // that goes down. Hence callSdk() here too.
   const handleInit = () => {
     const telemetryConfig: TelemetryConfig = { ...config };
-    init(telemetryConfig);
+    callSdk('init()', () => init(telemetryConfig));
   };
 
   return (
@@ -72,7 +101,10 @@ export function SdkConfigPanel({ initialized }: { initialized: boolean }) {
       description="Passed straight to init(). Change a value and re-initialize to see how the SDK behaves."
       actions={
         <>
-          <Button outline onClick={() => void shutdown()}>
+          <Button
+            outline
+            onClick={() => void callSdk('shutdown()', () => shutdown())}
+          >
             Shutdown
           </Button>
           <Button color="indigo" onClick={handleInit}>
@@ -141,17 +173,16 @@ export function SdkConfigPanel({ initialized }: { initialized: boolean }) {
           step={0.1}
           onChange={(value) => patch('sampleRate', value)}
         />
-        <Field className="sm:col-span-2">
-          <label className="flex items-center gap-3 text-sm/6 text-gray-900 dark:text-white">
-            <input
-              type="checkbox"
-              checked={config.captureErrors}
-              onChange={(event) => patch('captureErrors', event.target.checked)}
-              className="size-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 dark:border-white/15 dark:bg-white/5"
-            />
-            Capture uncaught errors and unhandled rejections automatically
-          </label>
-        </Field>
+        <CheckboxField
+          label="Capture uncaught errors and unhandled rejections automatically"
+          checked={config.captureErrors}
+          onChange={(checked) => patch('captureErrors', checked)}
+        />
+        <CheckboxField
+          label="Track page views automatically (on init and on every client-side navigation)"
+          checked={config.autoPageViews}
+          onChange={(checked) => patch('autoPageViews', checked)}
+        />
       </div>
     </Panel>
   );
