@@ -16,6 +16,14 @@ function statusTone(entry: InboxEntry) {
   return 'bg-amber-50 text-amber-800 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20';
 }
 
+/** Payload size as a human reads it: `842 B`, `1.4 KB`, `2.1 MB`. */
+function formatBytes(bytes: number) {
+  if (!Number.isFinite(bytes)) return '—';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function formatTime(timestamp: number) {
   const date = new Date(timestamp);
   return `${date.toLocaleTimeString([], { hour12: false })}.${String(
@@ -95,6 +103,7 @@ export function InboxPanel({
                   <span className="text-gray-900 dark:text-white">
                     {entry.eventCount} event{entry.eventCount === 1 ? '' : 's'}
                   </span>
+                  <Badge>{formatBytes(entry.bytes)}</Badge>
                   {entry.attempt && entry.attempt > 1 ? (
                     <Badge tone="warn">attempt {entry.attempt}</Badge>
                   ) : null}

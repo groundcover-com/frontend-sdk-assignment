@@ -16,6 +16,8 @@ export interface InboxEntry {
   error?: string;
   injected?: boolean;
   contentType: string;
+  /** Raw request body size in bytes, as the server received it. */
+  bytes: number;
   attempt?: number;
   sessionId?: string;
   eventCount: number;
