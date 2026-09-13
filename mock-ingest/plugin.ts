@@ -41,6 +41,8 @@ export interface InboxEntry {
   /** True when the failure was injected rather than caused by the payload. */
   injected?: boolean;
   contentType: string;
+  /** Raw request body size in bytes, as the server received it. */
+  bytes: number;
   attempt?: number;
   sessionId?: string;
   eventCount: number;
@@ -176,6 +178,7 @@ async function handleIngest(
 ): Promise<void> {
   const contentType = req.headers['content-type'] ?? '(none)';
   const raw = await readBody(req);
+  const bytes = Buffer.byteLength(raw, 'utf8');
 
   if (state.controls.latencyMs > 0) await sleep(state.controls.latencyMs);
 
@@ -188,6 +191,7 @@ async function handleIngest(
       ok: false,
       error: 'body is not valid JSON',
       contentType,
+      bytes,
       eventCount: 0,
       acceptedCount: 0,
       duplicateIds: [],
@@ -215,6 +219,7 @@ async function handleIngest(
       ok: false,
       error: validated.error,
       contentType,
+      bytes,
       attempt,
       sessionId,
       eventCount: Array.isArray((parsed as Record<string, unknown>)?.events)
@@ -238,6 +243,7 @@ async function handleIngest(
       ok: false,
       error,
       contentType,
+      bytes,
       attempt,
       sessionId,
       eventCount: events.length,
@@ -260,6 +266,7 @@ async function handleIngest(
       error: `injected failure (${status})`,
       injected: true,
       contentType,
+      bytes,
       attempt,
       sessionId,
       eventCount: events.length,
@@ -288,6 +295,7 @@ async function handleIngest(
     status: 202,
     ok: true,
     contentType,
+    bytes,
     attempt,
     sessionId,
     eventCount: events.length,

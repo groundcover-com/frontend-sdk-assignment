@@ -1,3 +1,7 @@
+// First import on purpose: the browser-environment patches must be in place
+// before the SDK module is evaluated, so an SDK that grabs `fetch` or
+// `sendBeacon` at module scope still gets the simulated ones.
+import './demo/hostile-env';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './app.tsx';

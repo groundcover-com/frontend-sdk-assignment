@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { demoTimers } from './hostile-env';
 import { fetchInbox, type InboxResponse } from './ingest-api';
 
 /** Polls the mock ingest server so the inspector shows what the SDK sent. */
@@ -15,8 +16,10 @@ export function useInbox(intervalMs = 1000) {
 
   useEffect(() => {
     void refresh();
-    const id = setInterval(() => void refresh(), intervalMs);
-    return () => clearInterval(id);
+    // Unthrottled timer: the inspector keeps updating even while the browser
+    // environment panel is simulating a background tab.
+    const id = demoTimers.setInterval(() => void refresh(), intervalMs);
+    return () => demoTimers.clearInterval(id);
   }, [refresh, intervalMs]);
 
   return { inbox, refresh };
