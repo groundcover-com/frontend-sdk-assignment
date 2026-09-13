@@ -17,7 +17,8 @@ the page it lives on.
 | --- | --- |
 | `src/sdk/index.ts` | **The public API you implement.** Signatures and contracts are given; the bodies are not. |
 | `src/sdk/types.ts` | Public config types and the wire types. The wire types are fixed — the server validates them. |
-| `src/demo/` | The playground: host-app buttons, config form, ingest inspector, status bar. Complete; you shouldn't need to change it. |
+| `src/demo/` | The playground: the host app, config form, browser-environment toggles, ingest inspector, status bar. Complete; you shouldn't need to change it. |
+| `plain.html`, `src/plain/main.ts` | A second consumer of the SDK with no React. Open it to check the SDK has no framework coupling and adds nothing to `window`. |
 | `mock-ingest/plugin.ts` | A fake ingest API served by the Vite dev server. Complete. |
 | `src/components/` | UI primitives used by the demo. |
 
@@ -95,6 +96,9 @@ Events should not each cost a request.
 - Fill in `getDiagnostics()` — the status bar at the top of the page renders it directly.
 - With `captureErrors: true`, capture `error` and `unhandledrejection` events
   automatically. The demo has buttons for both.
+- With `autoPageViews: true`, emit a `page_view` on `init()` and on every client-side
+  navigation in the store. Acme Store is a single-page app: it never reloads, and it
+  never calls `trackPageView()` on a route change — that one is yours.
 - `shutdown()` flushes, then releases timers and listeners, leaving the SDK ready for a
   later `init()`.
 
@@ -138,13 +142,24 @@ an `id`, `name`, numeric `timestamp` and a known `type`. It answers:
 
 ## The playground
 
+- **Acme Store** — the host application. A single-page store with its own client-side
+  routing that only ever calls the SDK's public API. It is a real app, not a button
+  board: if the SDK throws into it or leaves a promise rejected, the store crashes
+  visibly, exactly as a customer's app would.
 - **SDK configuration** — the object handed to `init()`. Shrink `batchSize`, shorten
   `flushIntervalMs`, or set `sampleRate` to 0 to see the edges.
 - **Ingest server controls** — failure injection. Set the failure rate to 1 and watch your
   retry logic; add latency to see what happens while a request is in flight.
-- **Ingest inspector** — every batch the server saw, newest first: status, attempt number,
-  duplicate ids and the exact payload.
+- **Ingest inspector** — every batch the server saw, newest first: status, attempt
+  number, payload size, duplicate ids and the exact payload.
 - **Status bar** — whatever `getDiagnostics()` returns.
+- **Browser environment** — the conditions a real page puts an SDK in, as switches:
+  storage that throws on every call, the ingest host unreachable with
+  `navigator.onLine === false`, a background tab (hidden document, timers throttled
+  to one wake-up a minute), and a 1 KB beacon quota. Flip them while events are in
+  flight.
+- **Plain-JS consumer** (`/plain.html`) — the same SDK in a page with no framework,
+  next to a live diff of everything it added to `window`.
 
 ## Technical Requirements
 
