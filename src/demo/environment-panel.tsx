@@ -1,14 +1,10 @@
 import { useEffect, useState } from 'react';
+
 import { Button } from '../components/button';
 import { Description, Label } from '../components/fieldset';
 import { Switch, SwitchField } from '../components/switch';
 import type { HostileEnv } from './hostile-env';
-import {
-  resetHostileEnv,
-  setHostileEnv,
-  storageWorks,
-  useHostileEnv,
-} from './hostile-env';
+import { resetHostileEnv, setHostileEnv, useHostileEnv } from './hostile-env';
 import { Panel } from './panel';
 
 interface Toggle {
@@ -19,13 +15,6 @@ interface Toggle {
 }
 
 const TOGGLES: Toggle[] = [
-  {
-    key: 'brokenStorage',
-    label: 'Storage throws',
-    description:
-      'Every localStorage/sessionStorage call raises SecurityError, like a page with cookies blocked or Safari private mode.',
-    apply: (on) => setHostileEnv({ brokenStorage: on }),
-  },
   {
     key: 'offline',
     label: 'Ingest host unreachable',
@@ -52,14 +41,12 @@ const TOGGLES: Toggle[] = [
 interface Readouts {
   onLine: boolean;
   visibility: string;
-  storage: 'ok' | 'throws';
 }
 
 function readEnvironment(): Readouts {
   return {
     onLine: navigator.onLine,
     visibility: document.visibilityState,
-    storage: storageWorks() ? 'ok' : 'throws',
   };
 }
 
@@ -150,11 +137,6 @@ export function EnvironmentPanel() {
           label="document.visibilityState"
           value={readouts.visibility}
           bad={readouts.visibility !== 'visible'}
-        />
-        <Readout
-          label="storage"
-          value={readouts.storage}
-          bad={readouts.storage !== 'ok'}
         />
       </div>
     </Panel>

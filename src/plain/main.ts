@@ -8,6 +8,7 @@
  */
 
 import { DEMO_API_KEY, INGEST_PATH } from '../demo/constants';
+
 import '../index.css';
 
 /** Snapshotted before the SDK module is imported, for the leak check below. */

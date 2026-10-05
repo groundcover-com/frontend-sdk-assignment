@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+
 import type { TelemetryDiagnostics } from '../sdk/types';
 
 function Stat({

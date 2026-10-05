@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import type React from 'react';
+
 import type { InboxEntry, InboxStats } from './ingest-api';
 import { Panel } from './panel';
 

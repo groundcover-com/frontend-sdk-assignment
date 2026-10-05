@@ -81,14 +81,15 @@ export interface TelemetryConfig {
   sampleRate?: number;
   /** Capture `error` / `unhandledrejection` automatically. Default false. */
   captureErrors?: boolean;
-  /** Emit a `page_view` on `init()` and on every client-side navigation. Default false. */
-  autoPageViews?: boolean;
   /** Free-form context echoed on every batch. */
   appVersion?: string;
   environment?: string;
 }
 
-/** Counters the demo page renders. Wire these up as you implement. */
+/**
+ * Counters the demo's status bar renders. Optional: fill in whatever helps
+ * you see what the SDK is doing, and leave the rest at zero.
+ */
 export interface TelemetryDiagnostics {
   initialized: boolean;
   sessionId: string | null;

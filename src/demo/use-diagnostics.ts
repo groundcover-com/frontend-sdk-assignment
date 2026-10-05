@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+
 import { getDiagnostics } from '../sdk';
 import type { TelemetryDiagnostics } from '../sdk/types';
 import { demoTimers } from './hostile-env';

@@ -1,3 +1,4 @@
+import { CatalogControlsPanel } from './demo/catalog-controls';
 import { EnvironmentPanel } from './demo/environment-panel';
 import { InboxPanel } from './demo/inbox-panel';
 import { SdkConfigPanel } from './demo/sdk-config-panel';
@@ -46,6 +47,7 @@ function App() {
             controls={inbox?.controls ?? null}
             onChanged={() => void refresh()}
           />
+          <CatalogControlsPanel />
           <EnvironmentPanel />
           <InboxPanel
             entries={inbox?.entries ?? []}

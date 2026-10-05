@@ -22,8 +22,12 @@ export function InputGroup({
   );
 }
 
-const dateTypes = ['date', 'datetime-local', 'month', 'time', 'week'];
+const dateTypes = ['date', 'datetime-local', 'month', 'time', 'week'] as const;
 type DateType = (typeof dateTypes)[number];
+
+function isDateType(type: string): type is DateType {
+  return dateTypes.some((dateType) => dateType === type);
+}
 
 export const Input = forwardRef(function Input(
   {
@@ -66,7 +70,7 @@ export const Input = forwardRef(function Input(
         className={clsx([
           // Date classes
           props.type &&
-            dateTypes.includes(props.type) && [
+            isDateType(props.type) && [
               '[&::-webkit-datetime-edit-fields-wrapper]:p-0',
               '[&::-webkit-date-and-time-value]:min-h-[1.5em]',
               '[&::-webkit-datetime-edit]:inline-flex',

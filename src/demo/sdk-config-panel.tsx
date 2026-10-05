@@ -1,11 +1,11 @@
 import { useState } from 'react';
+
 import { Button } from '../components/button';
 import { Description, Field, Label } from '../components/fieldset';
 import { Input } from '../components/input';
-import { init, shutdown } from '../sdk';
 import type { TelemetryConfig } from '../sdk/types';
 import { DEMO_API_KEY, INGEST_PATH } from './constants';
-import { callSdk } from './host-health';
+import { startTelemetry, stopTelemetry } from './host-telemetry';
 import { Panel } from './panel';
 
 /** Mirrors the defaults documented on `TelemetryConfig`. */
@@ -19,7 +19,6 @@ const INITIAL_CONFIG = {
   retryBaseDelayMs: 500,
   sampleRate: 1,
   captureErrors: false,
-  autoPageViews: false,
 };
 
 type DemoConfig = typeof INITIAL_CONFIG;
@@ -87,24 +86,18 @@ export function SdkConfigPanel({ initialized }: { initialized: boolean }) {
   const patch = <K extends keyof DemoConfig>(key: K, value: DemoConfig[K]) =>
     setConfig((current) => ({ ...current, [key]: value }));
 
-  // The bootstrap code of the host app, and just as exposed as the rest of it:
-  // if init() or shutdown() throws, the page that embedded the SDK is the one
-  // that goes down. Hence callSdk() here too.
   const handleInit = () => {
     const telemetryConfig: TelemetryConfig = { ...config };
-    callSdk('init()', () => init(telemetryConfig));
+    startTelemetry(telemetryConfig);
   };
 
   return (
     <Panel
       title="SDK configuration"
-      description="Passed straight to init(). Change a value and re-initialize to see how the SDK behaves."
+      description="The values the store's telemetry setup passes to init(). Change one and re-initialize to see how the SDK behaves."
       actions={
         <>
-          <Button
-            outline
-            onClick={() => void callSdk('shutdown()', () => shutdown())}
-          >
+          <Button outline onClick={stopTelemetry}>
             Shutdown
           </Button>
           <Button color="indigo" onClick={handleInit}>
@@ -177,11 +170,6 @@ export function SdkConfigPanel({ initialized }: { initialized: boolean }) {
           label="Capture uncaught errors and unhandled rejections automatically"
           checked={config.captureErrors}
           onChange={(checked) => patch('captureErrors', checked)}
-        />
-        <CheckboxField
-          label="Track page views automatically (on init and on every client-side navigation)"
-          checked={config.autoPageViews}
-          onChange={(checked) => patch('autoPageViews', checked)}
         />
       </div>
     </Panel>

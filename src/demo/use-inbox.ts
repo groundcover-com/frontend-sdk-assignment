@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+
 import { demoTimers } from './hostile-env';
 import { fetchInbox, type InboxResponse } from './ingest-api';
 
@@ -15,11 +16,15 @@ export function useInbox(intervalMs = 1000) {
   }, []);
 
   useEffect(() => {
-    void refresh();
-    // Unthrottled timer: the inspector keeps updating even while the browser
-    // environment panel is simulating a background tab.
+    // First poll on the next tick rather than inside the effect itself, then
+    // on an unthrottled timer: the inspector keeps updating even while the
+    // browser environment panel is simulating a background tab.
+    const first = demoTimers.setTimeout(() => void refresh(), 0);
     const id = demoTimers.setInterval(() => void refresh(), intervalMs);
-    return () => demoTimers.clearInterval(id);
+    return () => {
+      demoTimers.clearTimeout(first);
+      demoTimers.clearInterval(id);
+    };
   }, [refresh, intervalMs]);
 
   return { inbox, refresh };

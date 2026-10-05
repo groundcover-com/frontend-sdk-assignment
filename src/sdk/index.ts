@@ -99,7 +99,10 @@ export function shutdown(): Promise<void> {
   return Promise.resolve();
 }
 
-/** Snapshot of SDK state. The demo page polls this to render the status bar. */
+/**
+ * Snapshot of SDK state. The demo page polls this to render the status bar.
+ * Optional: return whatever helps you debug.
+ */
 export function getDiagnostics(): TelemetryDiagnostics {
   return {
     initialized: false,

@@ -2,9 +2,8 @@
  * Simulated browser conditions for the playground.
  *
  * Real pages are hostile to an SDK in ways a healthy localhost never is:
- * storage that throws, a network that goes away mid-batch, a tab the browser
- * demotes to one timer wake-up a minute, a beacon quota that refuses the
- * payload. This module patches the relevant browser APIs so those conditions
+ * a network that goes away mid-batch, a tab the browser demotes to one timer
+ * wake-up a minute, a beacon quota that refuses the payload. This module patches the relevant browser APIs so those conditions
  * can be switched on and off while the page is running.
  *
  * It is imported as the very first line of `src/main.tsx`, before the SDK
@@ -15,17 +14,16 @@
  */
 
 import { useSyncExternalStore } from 'react';
+
 import { INGEST_PATH } from './constants';
 
 export type HostileEnv = {
-  brokenStorage: boolean;
   offline: boolean;
   backgroundTab: boolean;
   tinyBeaconQuota: boolean;
 };
 
 const ALL_OFF: HostileEnv = {
-  brokenStorage: false,
   offline: false,
   backgroundTab: false,
   tinyBeaconQuota: false,
@@ -61,18 +59,9 @@ const nativeSendBeacon =
 const nativeXhrOpen = XMLHttpRequest.prototype.open;
 const nativeXhrSend = XMLHttpRequest.prototype.send;
 
-const storageProto = Storage.prototype;
 const nativeStorage = {
-  getItem: storageProto.getItem,
-  setItem: storageProto.setItem,
-  removeItem: storageProto.removeItem,
-  clear: storageProto.clear,
-  key: storageProto.key,
-  length: Object.getOwnPropertyDescriptor(storageProto, 'length'),
-};
-const windowStorageDescriptors = {
-  localStorage: Object.getOwnPropertyDescriptor(window, 'localStorage'),
-  sessionStorage: Object.getOwnPropertyDescriptor(window, 'sessionStorage'),
+  getItem: Storage.prototype.getItem,
+  setItem: Storage.prototype.setItem,
 };
 
 function captureStorage(kind: 'local' | 'session'): Storage | null {
@@ -109,7 +98,6 @@ function readPersisted(): HostileEnv {
     if (typeof parsed !== 'object' || parsed === null) return { ...ALL_OFF };
     const record = parsed as Record<string, unknown>;
     return {
-      brokenStorage: record.brokenStorage === true,
       offline: record.offline === true,
       backgroundTab: record.backgroundTab === true,
       tinyBeaconQuota: record.tinyBeaconQuota === true,
@@ -122,8 +110,8 @@ function readPersisted(): HostileEnv {
 function persist(next: HostileEnv): void {
   if (!rawSessionStorage) return;
   try {
-    // Native methods on the captured object: this has to keep working while
-    // storage is "broken", or a reload would lose the toggles that broke it.
+    // Native methods on the captured object, so a page that patches Storage
+    // cannot take the playground's own toggles down with it.
     nativeStorage.setItem.call(
       rawSessionStorage,
       PERSIST_KEY,
@@ -142,109 +130,7 @@ function emit(): void {
 }
 
 // ---------------------------------------------------------------------------
-// 1. Storage that throws
-// ---------------------------------------------------------------------------
-
-function storageDenied(property: string): DOMException {
-  return new DOMException(
-    `Failed to read the '${property}' property from 'Window': Access is denied for this document.`,
-    'SecurityError',
-  );
-}
-
-let storageBroken = false;
-
-function installBrokenStorage(): void {
-  if (storageBroken) return;
-  storageBroken = true;
-
-  storageProto.getItem = () => {
-    throw storageDenied('localStorage');
-  };
-  storageProto.setItem = () => {
-    throw storageDenied('localStorage');
-  };
-  storageProto.removeItem = () => {
-    throw storageDenied('localStorage');
-  };
-  storageProto.clear = () => {
-    throw storageDenied('localStorage');
-  };
-  storageProto.key = () => {
-    throw storageDenied('localStorage');
-  };
-
-  try {
-    Object.defineProperty(storageProto, 'length', {
-      configurable: true,
-      get() {
-        throw storageDenied('localStorage');
-      },
-    });
-  } catch {
-    // Length stays readable; every method still throws.
-  }
-
-  // A page with cookies blocked throws on the property access itself, before
-  // any method is reached. Only possible where the descriptor is configurable.
-  for (const name of ['localStorage', 'sessionStorage'] as const) {
-    const descriptor = windowStorageDescriptors[name];
-    if (!descriptor?.configurable) continue;
-    try {
-      Object.defineProperty(window, name, {
-        configurable: true,
-        enumerable: descriptor.enumerable ?? true,
-        get() {
-          throw storageDenied(name);
-        },
-      });
-    } catch {
-      // Fall back to the prototype patch above.
-    }
-  }
-}
-
-function restoreStorage(): void {
-  if (!storageBroken) return;
-  storageBroken = false;
-
-  storageProto.getItem = nativeStorage.getItem;
-  storageProto.setItem = nativeStorage.setItem;
-  storageProto.removeItem = nativeStorage.removeItem;
-  storageProto.clear = nativeStorage.clear;
-  storageProto.key = nativeStorage.key;
-
-  if (nativeStorage.length) {
-    try {
-      Object.defineProperty(storageProto, 'length', nativeStorage.length);
-    } catch {
-      // Nothing else to try.
-    }
-  }
-
-  for (const name of ['localStorage', 'sessionStorage'] as const) {
-    const descriptor = windowStorageDescriptors[name];
-    if (!descriptor?.configurable) continue;
-    try {
-      Object.defineProperty(window, name, descriptor);
-    } catch {
-      // Nothing else to try.
-    }
-  }
-}
-
-/** Whether a storage read currently succeeds. The panel renders this. */
-export function storageWorks(): boolean {
-  try {
-    window.localStorage.getItem(PERSIST_KEY);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// 2. Offline
+// 1. Offline
 // ---------------------------------------------------------------------------
 
 const nativeOnLine = Object.getOwnPropertyDescriptor(
@@ -299,7 +185,7 @@ function networkFailure(): Promise<never> {
 }
 
 // ---------------------------------------------------------------------------
-// 4. Beacon quota
+// 3. Beacon quota
 // ---------------------------------------------------------------------------
 
 /** Byte length of a body, or null when it cannot be measured cheaply. */
@@ -424,7 +310,7 @@ XMLHttpRequest.prototype.open = patchedXhrOpen;
 XMLHttpRequest.prototype.send = patchedXhrSend;
 
 // ---------------------------------------------------------------------------
-// 3. Background tab: hidden document, throttled timers, held frames
+// 2. Background tab: hidden document, throttled timers, held frames
 // ---------------------------------------------------------------------------
 
 const nativeVisibilityState = Object.getOwnPropertyDescriptor(
@@ -621,7 +507,6 @@ export function setHostileEnv(patch: Partial<HostileEnv>): void {
   const previous = state;
   const next: HostileEnv = { ...previous, ...patch };
   if (
-    next.brokenStorage === previous.brokenStorage &&
     next.offline === previous.offline &&
     next.backgroundTab === previous.backgroundTab &&
     next.tinyBeaconQuota === previous.tinyBeaconQuota
@@ -631,11 +516,6 @@ export function setHostileEnv(patch: Partial<HostileEnv>): void {
 
   state = next;
   persist(next);
-
-  if (next.brokenStorage !== previous.brokenStorage) {
-    if (next.brokenStorage) installBrokenStorage();
-    else restoreStorage();
-  }
 
   if (next.offline !== previous.offline) {
     window.dispatchEvent(new Event(next.offline ? 'offline' : 'online'));
@@ -668,7 +548,3 @@ function getSnapshot(): HostileEnv {
 export function useHostileEnv(): HostileEnv {
   return useSyncExternalStore(subscribe, getSnapshot);
 }
-
-// Re-apply what survived the reload. Only storage needs installing; the other
-// patches are permanent and read `state` as they run.
-if (state.brokenStorage) installBrokenStorage();
